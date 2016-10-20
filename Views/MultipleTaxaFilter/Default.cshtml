@@ -1,0 +1,66 @@
+@model SitefinityWebApp.Mvc.Models.MultipleTaxaFilterModel
+@using Telerik.Sitefinity.Frontend.Mvc.Helpers;
+@using SitefinityWebApp.Mvc.Helpers;
+
+<style>
+    .dropdown {
+        display: inline-block;
+    }
+</style>
+
+<h1>Taxa
+</h1>
+
+@Html.Script(Url.Content("~/ResourcePackages/Bootstrap/assets/dist/js/bootstrap.min.js"), "top")
+
+@*<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">*@
+
+<div class="dropdown">
+    <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">
+        Categories
+  <span class="caret"></span>
+    </button>
+    @if (Model.Categories.Count > 0)
+    {
+        <ul id="categories" class="dropdown-menu">
+            @foreach (var item in Model.Categories)
+            {
+                <li><a data-value='@item.Url' href="@Url.FilterAction(null, null, new KeyValuePair<string, string>("categories", item.Title))">@item.Title</a></li>
+            }
+        </ul>
+    }
+</div>
+
+<div class="dropdown">
+    <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">
+        Tags
+  <span class="caret"></span>
+    </button>
+    @if (Model.Tags.Count > 0)
+    {
+        <ul id="tags" class="dropdown-menu">
+            @foreach (var item in Model.Tags)
+            {
+                <li><a data-value='@item.Url' href="@Url.FilterAction(null, null, new KeyValuePair<string, string>("tags", item.Title))">@item.Title</a></li>
+            }
+        </ul>
+    }
+</div>
+
+@if (Model.SelectedTaxa != null && Model.SelectedTaxa.Count > 0)
+{
+    <h3>Selected taxa:</h3>
+    foreach (var key in Model.SelectedTaxa.Keys)
+    {
+        <span>@key: 
+    @{var items = Model.SelectedTaxa[key];
+      foreach (var item in items)
+      {
+        <button class="btn btn-info" type="button">
+            @item.Title <a data-value='@item.Url' href="@Url.FilterAction(null, null, new KeyValuePair<string, string>(key, item.Title))">X</a>
+        </button>  
+      }     
+    }
+        </span>
+    }
+}
