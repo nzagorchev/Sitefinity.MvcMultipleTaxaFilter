@@ -52,7 +52,7 @@ namespace SitefinityWebApp.Mvc.Controllers
         protected virtual IQueryable<HierarchicalTaxon> GetCategories(TaxonomyManager manager)
         {
             return manager.GetTaxa<HierarchicalTaxon>().Where(t => t.TaxonomyId == TaxonomyManager.CategoriesTaxonomyId).OrderBy(t => t.Title);
-        }     
+        }
 
         public virtual Dictionary<string, List<TaxonModel>> ResolveSelectedTaxa()
         {
@@ -60,49 +60,47 @@ namespace SitefinityWebApp.Mvc.Controllers
 
             // TODO: cache the result per query string?
             var result = new Dictionary<string, List<TaxonModel>>();
+            var taxaDict = new Dictionary<Guid, List<TaxonModel>>();
 
             var context = SystemManager.CurrentHttpContext;
             var queryString = context.Request.QueryString;
             if (queryString != null && queryString.HasKeys())
             {
-                string categoriesKey = manager.GetTaxonomy(TaxonomyManager.CategoriesTaxonomyId).Title.ToLowerInvariant();
-                string tagsKey = manager.GetTaxonomy(TaxonomyManager.TagsTaxonomyId).Title.ToLowerInvariant();
+                var category = manager.GetTaxonomy(TaxonomyManager.CategoriesTaxonomyId);
+                string categoriesKey = category.Title.ToLowerInvariant();
+                var tag = manager.GetTaxonomy(TaxonomyManager.TagsTaxonomyId);
+                string tagsKey = tag.Title.ToLowerInvariant();
                 foreach (var key in queryString.AllKeys)
                 {
                     string[] filterValues = queryString[key].Split(new char[] { MultipleTaxaFilterController.queryStringSplitChar }, StringSplitOptions.RemoveEmptyEntries);
                     string keyToLowerInvariant = key.ToLowerInvariant();
-                    switch (keyToLowerInvariant)
+                    if (keyToLowerInvariant == categoriesKey)
                     {
-                        case "categories":
-                            {
-                                var values = filterValues.Select(v => v.ToUpper()).ToArray();
-                                var taxa = this.GetCategories(manager)
-                                    .Where(t => values.Contains(t.Title.ToUpper()))
-                                    .Select(TaxonModel.ToTaxonModel)
-                                    .ToList();
+                        var values = filterValues.Select(v => v.ToUpper()).ToArray();
+                        var taxa = this.GetCategories(manager)
+                            .Where(t => values.Contains(t.Title.ToUpper()))
+                            .Select(TaxonModel.ToTaxonModel)
+                            .ToList();
 
-                                // The QueryString will merge if the key is present more than once, for instance categories=cat1,cat2,cat4&tags=tag1&categories=cat1
-                                result.Add(keyToLowerInvariant, taxa);
-                                break;
-                            }
-                        case "tags":
-                            {
-                                var values = filterValues.Select(v => v.ToUpper()).ToArray();
-                                var taxa = this.GetTags(manager)
-                                    .Where(t => values.Contains(t.Title.ToUpper()))
-                                    .Select(TaxonModel.ToTaxonModel)
-                                    .ToList();
+                        // The QueryString will merge if the key is present more than once, for instance categories=cat1,cat2,cat4&tags=tag1&categories=cat1
+                        result.Add(keyToLowerInvariant, taxa);
+                        taxaDict.Add(category.Id, taxa);
+                    }
+                    else if (keyToLowerInvariant == tagsKey)
+                    {
+                        var values = filterValues.Select(v => v.ToUpper()).ToArray();
+                        var taxa = this.GetTags(manager)
+                            .Where(t => values.Contains(t.Title.ToUpper()))
+                            .Select(TaxonModel.ToTaxonModel)
+                            .ToList();
 
-                                result.Add(keyToLowerInvariant, taxa);
-                                break;
-                            }
-                        default:
-                            break;
+                        result.Add(keyToLowerInvariant, taxa);
+                        taxaDict.Add(tag.Id, taxa);
                     }
                 }
             }
 
-            context.Request.RequestContext.RouteData.Values["taxa"] = result;
+            context.Request.RequestContext.RouteData.Values["taxa"] = taxaDict;
             return result;
         }
 
