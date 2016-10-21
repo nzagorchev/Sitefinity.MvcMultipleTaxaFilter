@@ -34,17 +34,28 @@ namespace SitefinityWebApp.Mvc.Controllers
             string filter = ConstructFilterExpression(taxa);
 
             var model = new NewsFilteredWidgetModel();
-            var manager = NewsManager.GetManager();
-            var newsItemsViewModels = manager.GetNewsItems()
-                .Where(n => n.Visible && n.Status == Telerik.Sitefinity.GenericContent.Model.ContentLifecycleStatus.Live)
-                .Where(filter)
-                .Select(n => new NewsViewModel()
-                {
-                    Title = n.Title
-                })
-                .ToList();
 
-            model.Items = newsItemsViewModels;
+            // Show news items only if there is a filter
+            if (!string.IsNullOrEmpty(filter))
+            {
+                var manager = NewsManager.GetManager();
+                var newsItems = manager.GetNewsItems()
+                    .Where(n => n.Visible && n.Status == Telerik.Sitefinity.GenericContent.Model.ContentLifecycleStatus.Live);
+
+                newsItems = newsItems.Where(filter);
+
+                var newsItemsViewModels = newsItems
+                    .Skip(0)
+                    .Take(20)
+                    .Select(n => new NewsViewModel()
+                    {
+                        Title = n.Title
+                    })
+                    .ToList();
+
+                model.Items = newsItemsViewModels;
+            }
+
             return View("Default", model);
         }
 
