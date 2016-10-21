@@ -100,10 +100,11 @@ namespace SitefinityWebApp.Mvc.Controllers
                 }
             }
 
-            context.Request.RequestContext.RouteData.Values["taxa"] = taxaDict;
+            context.Request.RequestContext.RouteData.Values[routeDataTaxaKey] = taxaDict;
             return result;
         }
 
         internal static readonly char queryStringSplitChar = ',';
+        internal static readonly string routeDataTaxaKey = "Taxa";
     }
 }

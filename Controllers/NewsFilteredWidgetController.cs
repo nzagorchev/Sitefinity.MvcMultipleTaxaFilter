@@ -16,11 +16,13 @@ namespace SitefinityWebApp.Mvc.Controllers
     [ControllerToolboxItem(Name = "NewsFilteredWidget", Title = "NewsFilteredWidget", SectionName = "MvcWidgets")]
     public class NewsFilteredWidgetController : Controller
     {
-        /// <summary>
-        /// Gets or sets the message.
-        /// </summary>
-        [Category("String Properties")]
-        public string Message { get; set; }
+        public Type ContentType
+        {
+            get
+            {
+                return typeof(NewsItem);
+            }
+        }
 
         /// <summary>
         /// This is the default Action.
@@ -28,15 +30,35 @@ namespace SitefinityWebApp.Mvc.Controllers
         public ActionResult Index()
         {
             var context = SystemManager.CurrentHttpContext;
-            var taxa = context.Request.RequestContext.RouteData.Values["taxa"] as Dictionary<Guid, List<TaxonModel>>;
+            var taxa = context.Request.RequestContext.RouteData.Values[MultipleTaxaFilterController.routeDataTaxaKey] as Dictionary<Guid, List<TaxonModel>>;
+            string filter = ConstructFilterExpression(taxa);
+
+            var model = new NewsFilteredWidgetModel();
+            var manager = NewsManager.GetManager();
+            var newsItemsViewModels = manager.GetNewsItems()
+                .Where(n => n.Visible && n.Status == Telerik.Sitefinity.GenericContent.Model.ContentLifecycleStatus.Live)
+                .Where(filter)
+                .Select(n => new NewsViewModel()
+                {
+                    Title = n.Title
+                })
+                .ToList();
+
+            model.Items = newsItemsViewModels;
+            return View("Default", model);
+        }
+
+        private string ConstructFilterExpression(Dictionary<Guid, List<TaxonModel>> taxa)
+        {
             string filter = string.Empty;
             if (taxa != null && taxa.Count > 0)
             {
+                var fields = GetTaxonomyFields(this.ContentType);
                 for (int i = 0; i < taxa.Keys.Count; i++)
                 {
                     Guid key = taxa.Keys.ElementAt(i);
-                    // Category.Contains("{Taxonomy ID}") AND Category.Contains("{Taxonomy ID}")
-                    string fieldName = this.GetTaxonomyField(key);
+                    // Category.Contains(({Taxon ID})) AND Category.Contains(({Taxon ID}))
+                    string fieldName = GetTaxonomyField(fields, key);
                     if (!string.IsNullOrEmpty(fieldName))
                     {
                         var items = taxa[key];
@@ -60,38 +82,11 @@ namespace SitefinityWebApp.Mvc.Controllers
                     }
                 }
             }
-
-            var model = new NewsFilteredWidgetModel();
-            var manager = NewsManager.GetManager();
-            var newsItemsViewModels = manager.GetNewsItems()
-                .Where(n => n.Visible && n.Status == Telerik.Sitefinity.GenericContent.Model.ContentLifecycleStatus.Live)
-                .Where(filter)
-                .Select(n => new NewsViewModel()
-                {
-                    Title = n.Title
-                })
-                .ToList();
-
-            model.Items = newsItemsViewModels;
-            return View("Default", model);
+            return filter;
         }
 
-        private Type contentType;
-
-        public Type ContentType
+        private static string GetTaxonomyField(TaxonomyPropertyDescriptor[] fields, Guid taxonomyId)
         {
-            get { return typeof(NewsItem); }
-        }
-
-
-        private string GetTaxonomyField(Guid taxonomyId)
-        {
-            // TODO: Optimize or execute once for all fields
-            var fields = TypeDescriptor.GetProperties(this.ContentType).Cast<PropertyDescriptor>()
-                .Where(p => p is TaxonomyPropertyDescriptor)
-                .Cast<TaxonomyPropertyDescriptor>()
-                .ToList();
-
             var field = fields.Where(f => f.TaxonomyId == taxonomyId).FirstOrDefault();
             if (field != null)
             {
@@ -99,6 +94,17 @@ namespace SitefinityWebApp.Mvc.Controllers
             }
 
             return null;
+        }
+
+        private static TaxonomyPropertyDescriptor[] GetTaxonomyFields(Type type)
+        {
+            var fields = TypeDescriptor.GetProperties(type)
+                .Cast<PropertyDescriptor>()
+                .Where(descriptor => descriptor is TaxonomyPropertyDescriptor)
+                .Cast<TaxonomyPropertyDescriptor>()
+                .ToArray();
+
+            return fields;
         }
     }
 }
