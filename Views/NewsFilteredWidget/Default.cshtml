@@ -1,0 +1,14 @@
+@model SitefinityWebApp.Mvc.Models.NewsFilteredWidgetModel
+
+<h3>Filtered News Items
+</h3>
+
+@if (Model != null && Model.Items != null && Model.Items.Count() > 0)
+{
+    <div class="list-group">
+        @foreach (var item in Model.Items)
+        {
+            <a href="#" class="list-group-item">@item.Title</a>
+        }
+    </div>
+}
